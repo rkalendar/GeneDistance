@@ -1,5 +1,5 @@
-## KmerDistance
-## Identifications of genetic similarity or the distance between genomic sequences (In approximate string matching).
+## GeneDistance
+## Identifications of genetic similarity or the distance between genomic sequences (In approximate string matching)
 
 ## Author
 Ruslan Kalendar 
