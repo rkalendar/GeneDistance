@@ -20,21 +20,21 @@ How do I set or change [the Java path system variable](https://www.java.com/en/d
 
 
 To run the project from the command line. Command-line options, separated by spaces. 
-The executive file ```KmerDistance.jar``` is in the ```dist``` directory, which can be copied to any location. 
+The executive file ```GeneDistance.jar``` is in the ```dist``` directory, which can be copied to any location. 
 Go to the target folder and type the following; an individual file or a file folder can be specified:
 
-```java -jar KmerDistance.jar <target_file_path/Folder_path>```
+```java -jar GeneDistance.jar <target_file_path/Folder_path>```
 
 
 ### Basic usage:
 
-```java -jar <KmerDistancePath>\dist\KmerDistance.jar <target_file_path> optional_commands```
+```java -jar <GeneDistancePath>\dist\GeneDistance.jar <target_file_path> optional_commands```
 
 
 ### Examples:
 ```
-java -jar C:\KmerDistance\dist\KmerDistance.jar C:\KmersPattern\test\t1.txt
+java -jar C:\GeneDistance\dist\GeneDistance.jar C:\KmersPattern\test\t1.txt
 
-java -jar C:\KmerDistance\dist\KmerDistance.jar E:\Genomes\Oryza_sativa\ 
+java -jar C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ 
 
 ```
