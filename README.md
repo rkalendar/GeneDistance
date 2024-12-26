@@ -1,5 +1,5 @@
 ## GeneDistance
-## Identifications of genetic similarity or the distance between genomic sequences (discriminative k-mers and approximate matching algorithm)
+## Identifications of genetic similarity or the distance between genomic sequences (approximate matching algorithm)
 
 ## Author
 Ruslan Kalendar 
