@@ -1,11 +1,11 @@
 ## GeneDistance
 ## Identifications of genetic similarity or the distance between genomic sequences (approximate matching algorithm)
 
+Alignment-free method for calculating genetic distances between DNA sequences as a basis for similarity distance estimation and phylogenetic reconstruction. The proposed algorithm is effective for measuring homology in cases of mixed sequences and different lengths, including individual chromosomes of the same or different species can be used for analysis. The application of the proposed algorithm is not limited to determining the degree of homology between sequences, but can be used for phylogenetic analysis, species identification and sequence classification in genomic assemblies.
+
 ## Author
 Ruslan Kalendar 
 email: ruslan.kalendar@helsinki.fi
-
-[Web](http://primerdigital.com/tools/)
 
 ## Availability and requirements:
 
