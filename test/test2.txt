@@ -1,0 +1,51 @@
+https://www.oracle.com/java/technologies/downloads/
+
+E:\Genomes\Brachypodium\
+E:\Genomes\Zea_mays\
+E:\Genomes\GRCh38.p14\
+E:\Genomes\Viruses\
+E:\Genomes\Zea_mays\
+E:\Genomes\Hordeum_vulgare\
+E:\Genomes\Oryza_sativa\
+E:\Genomes\Ecoli\
+
+E:\Genomes\Macrobrachium_nipponense\
+
+E:\Genomes\Bacteria\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar C:\MyPrograms\Java\GeneDistance\test\b1.txt
+
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Puccinia_triticina\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar C:\Users\Ruslan\Downloads\sample_genome.fasta
+
+C:\MyPrograms\Java\GeneDistance\test\copia.txt
+
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Puccinia_triticina\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Mitochondrion\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Chloroplast\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Mycobacterium_tuberculosis\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\GRCh38.p14\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Pyricularia_oryzae\Chromosomes\Ch1\
+
+java -jar C:\MyPrograms\Java\GeneDistance\dist\GeneDistance.jar E:\Genomes\Mix2\ 
+
+E:\Genomes\Mix2\ model=4
+ 
+C:\MyPrograms\Java\GeneDistance\test\b0.txt model=2
+
+
+
+http://www.trex.uqam.ca/index.php?action=trex&menuD=3&project=trex
+
+https://www.ncbi.nlm.nih.gov/datasets/taxonomy/562/
+https://www.ncbi.nlm.nih.gov/datasets/genome/?taxon=562&assembly_level=3:3
+
+https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_029281585.2/
