@@ -33,7 +33,7 @@ Go to the target folder and type the following; an individual file or a file fol
 
 ### Examples:
 ```
-java -jar C:\GeneDistance\dist\GeneDistance.jar C:\GeneDistancePath\test\t1.txt
+java -jar C:\GeneDistance\dist\GeneDistance.jar C:\GeneDistance\test\t1.txt
 
 java -jar C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ 
 
