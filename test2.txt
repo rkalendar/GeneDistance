@@ -1,5 +1,3 @@
-https://www.oracle.com/java/technologies/downloads/
-
 E:\Genomes\Brachypodium\
 E:\Genomes\Zea_mays\
 E:\Genomes\GRCh38.p14\
