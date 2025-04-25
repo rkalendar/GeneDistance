@@ -19,7 +19,7 @@ Programming language: Java 23 or higher
 How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
 
 
-To run the project from the command line. Command-line options, separated by spaces. 
+To run the project from the command line (CLI). Command-line options, separated by spaces. 
 The executive file ```GeneDistance.jar``` is in the ```dist``` directory, which can be copied to any location. 
 Go to the target folder and type the following; an individual file or a file folder can be specified:
 
