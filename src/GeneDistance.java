@@ -17,7 +17,7 @@ public class GeneDistance {
                 int j = s.indexOf("mod=");
                 int x = s.indexOf(" ", j);
                 if (x > j) {
-                    model = StrToInt(s.substring(j + 6, x));
+                    model = StrToInt(s.substring(j + 4, x));
                     if (model < 0) {
                         model = 0;
                     }
