@@ -38,3 +38,13 @@ java -jar C:\GeneDistance\dist\GeneDistance.jar C:\GeneDistance\test\t1.txt
 java -jar C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ -mod=4
 
 ```
+
+### Large genome usage (you will have to show the program to use more RAM, for example as listed here, up to 64 Gb memory: -Xms16g -Xmx64g):
+```
+java -jar -Xms16g -Xmx64g C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ -mod=4
+```
+For chromosomes larger than 500 Mb you will need to use more memory, 128 Gb:
+```
+java -jar -Xms32g -Xmx128g C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ -mod=4
+```
+
