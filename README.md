@@ -48,3 +48,16 @@ For chromosomes larger than 500 Mb you will need to use more memory, 128 Gb:
 java -jar -Xms32g -Xmx128g C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Cycas_panzhihuaensis\ -mod=4
 ```
 
+
+## Sequence Entry:
+Sequence data files are prepared using a text editor and saved in ASCII as text/plain format (.txt) or in .fasta or without file extensions (a file extension is not obligatory). The program takes a single sequence or accepts multiple DNA sequences in FASTA format. The template length is not limited.
+
+## FASTA format description:
+A sequence in FASTA format consists of the following:
+One line starts with a ">" sign and a sequence identification code. A textual description of the sequence optionally follows it. Since it is not part of the official format description, software can ignore it when it is present.
+One or more lines containing the sequence itself. A file in FASTA format may comprise more than one sequence.
+
+
+
+
+
