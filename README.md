@@ -35,13 +35,13 @@ Go to the target folder and type the following; an individual file or a file fol
 ```
 java -jar C:\GeneDistance\dist\GeneDistance.jar C:\GeneDistance\test\t1.txt
 
-java -jar C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Oryza_sativa\ -mod=4
+java -jar C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\Chloroplast\ -mod=2
 
 ```
 
 ### Large genome usage (you will have to show the program to use more RAM, for example as listed here, up to 64 Gb memory: -Xms16g -Xmx64g):
 ```
-java -jar -Xms16g -Xmx64g C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\T2T-CHM13v2.0\ -mod=4
+java -jar -Xms16g -Xmx64g C:\GeneDistance\dist\GeneDistance.jar E:\Genomes\T2T-CHM13v2.0\ -mod=3
 ```
 For chromosomes larger than 500 Mb you will need to use more memory, 128 Gb:
 ```
