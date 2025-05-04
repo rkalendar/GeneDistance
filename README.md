@@ -15,9 +15,9 @@ Programming language: Java 23 or higher
 
 [Java Downloads](https://www.oracle.com/java/technologies/downloads/)
 
-
 How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
 
+The program generates a file for analysis in the software MEGA 12: https://www.megasoftware.net/
 
 To run the project from the command line (CLI). Command-line options, separated by spaces. 
 The executive file ```GeneDistance.jar``` is in the ```dist``` directory, which can be copied to any location. 
