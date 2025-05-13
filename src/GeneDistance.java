@@ -12,23 +12,23 @@ public class GeneDistance {
             System.out.println("Target file or Folder: " + infile);
 
             String s = String.join(" ", args).toLowerCase() + " ";
-            int model = 0;
-            boolean KmerCounter = false;
+            int kmer = 4;
+            int KmerCounter = 0;
 
-            if (s.contains("-kmers")) {
-                KmerCounter = true;
+            if (s.contains("-kmerstat")) {
+                KmerCounter = 1;
+            }
+            if (s.contains("-kmer2stat")) {
+                KmerCounter = 2;
             }
 
-            if (s.contains("mod=")) {
-                int j = s.indexOf("mod=");
+            if (s.contains("kmer=")) {
+                int j = s.indexOf("kmer=");
                 int x = s.indexOf(" ", j);
                 if (x > j) {
-                    model = StrToInt(s.substring(j + 4, x));
-                    if (model < 0) {
-                        model = 0;
-                    }
-                    if (model > 5) {
-                        model = 5;
+                    kmer = StrToInt(s.substring(j + 5, x));
+                    if (kmer < 0) {
+                        kmer = 0;
                     }
                 }
             }
@@ -50,11 +50,11 @@ public class GeneDistance {
                             filelist[++k] = file.getAbsolutePath();
                         }
                     }
-                    SaveResult(KmerCounter, model, filelist, folder.toPath().toString() + File.separator + "result");
+                    SaveResult(KmerCounter, kmer, filelist, folder.toPath().toString() + File.separator + "result");
                 } else {
                     String[] filelist = new String[1];
                     filelist[0] = infile;
-                    SaveResult(KmerCounter, model, filelist, folder.toPath().toString()); //.xls
+                    SaveResult(KmerCounter, kmer, filelist, folder.toPath().toString()); //.xls
                 }
             }
         } else {
@@ -62,19 +62,25 @@ public class GeneDistance {
             System.out.println("Basic usage:");
             System.out.println("java -jar GeneDistance.jar <inputfile>/<inputfolderpath> <optional_commands>");
             System.out.println("Common options:");
-            System.out.println("mod=1\t Different sets of kmers used in the analysis: mod=0...4 (default mod=0)");
+            System.out.println("-kmer=1\t Different sets of kmers used in the analysis: kmer=4/6/8/10 (default -kmer=4);");
+            System.out.println("-kmerstat\t Determining the number of kmers in sequences;");
+            System.out.println("-kmer2stat\t Determine the average number of kmers for all target sequences;");
         }
     }
 
-    private static void SaveResult(boolean KmerCounter, int model, String[] infiles, String folder) {
+    private static void SaveResult(int KmerCounter, int model, String[] infiles, String folder) {
         try {
             long startTime = System.nanoTime();
             System.out.println("Running...");
             SequencesSimilarity s1 = new SequencesSimilarity(model);
             s1.SetFolder(infiles, folder);
 
-            if (KmerCounter) {
-                s1.RunKmerCounter();
+            if (KmerCounter > 0) {
+                if (KmerCounter == 1) {
+                    s1.RunKmerCounter();
+                } else {
+                    s1.RunKmerCounter2();
+                }
             } else {
                 s1.RunPattern();
             }
