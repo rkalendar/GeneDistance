@@ -62,7 +62,7 @@ public class GeneDistance {
             System.out.println("Basic usage:");
             System.out.println("java -jar GeneDistance.jar <inputfile>/<inputfolderpath> <optional_commands>");
             System.out.println("Common options:");
-            System.out.println("-kmer=1\t Different sets of kmers used in the analysis: kmer=4/6/8/10 (default -kmer=4);");
+            System.out.println("-kmer=6\t Different sets of kmers used in the analysis: kmer=4/6/8/10 (default -kmer=4);");
             System.out.println("-kmerstat\t Determining the number of kmers in sequences;");
             System.out.println("-kmer2stat\t Determine the average number of kmers for all target sequences;");
         }
@@ -76,11 +76,7 @@ public class GeneDistance {
             s1.SetFolder(infiles, folder);
 
             if (KmerCounter > 0) {
-                if (KmerCounter == 1) {
-                    s1.RunKmerCounter();
-                } else {
-                    s1.RunKmerCounter2();
-                }
+                s1.RunKmerCounter(KmerCounter);
             } else {
                 s1.RunPattern();
             }
