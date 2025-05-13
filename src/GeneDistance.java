@@ -13,6 +13,12 @@ public class GeneDistance {
 
             String s = String.join(" ", args).toLowerCase() + " ";
             int model = 0;
+            boolean KmerCounter = false;
+
+            if (s.contains("-kmers")) {
+                KmerCounter = true;
+            }
+
             if (s.contains("mod=")) {
                 int j = s.indexOf("mod=");
                 int x = s.indexOf(" ", j);
@@ -21,8 +27,8 @@ public class GeneDistance {
                     if (model < 0) {
                         model = 0;
                     }
-                    if (model > 4) {
-                        model = 4;
+                    if (model > 5) {
+                        model = 5;
                     }
                 }
             }
@@ -44,15 +50,15 @@ public class GeneDistance {
                             filelist[++k] = file.getAbsolutePath();
                         }
                     }
-                    SaveResult(model, filelist, folder.toPath().toString() + File.separator + "result");
+                    SaveResult(KmerCounter, model, filelist, folder.toPath().toString() + File.separator + "result");
                 } else {
                     String[] filelist = new String[1];
                     filelist[0] = infile;
-                    SaveResult(model, filelist, folder.toPath().toString()); //.xls
+                    SaveResult(KmerCounter, model, filelist, folder.toPath().toString()); //.xls
                 }
             }
         } else {
-            System.out.println("GeneDistance (2025) by Ruslan Kalendar (ruslan.kalendar@helsinki.fi)\nhttps://github.com/rkalendar/GeneDistance\n");
+            System.out.println("GeneDistance (2024-2025) by Ruslan Kalendar (ruslan.kalendar@helsinki.fi)\nhttps://github.com/rkalendar/GeneDistance\n");
             System.out.println("Basic usage:");
             System.out.println("java -jar GeneDistance.jar <inputfile>/<inputfolderpath> <optional_commands>");
             System.out.println("Common options:");
@@ -60,14 +66,19 @@ public class GeneDistance {
         }
     }
 
-    private static void SaveResult(int model, String[] infiles, String folder) {
+    private static void SaveResult(boolean KmerCounter, int model, String[] infiles, String folder) {
         try {
             long startTime = System.nanoTime();
             System.out.println("Running...");
             SequencesSimilarity s1 = new SequencesSimilarity(model);
             s1.SetFolder(infiles, folder);
-            s1.RunPattern();
-            // s1.RunKmerCounter();
+
+            if (KmerCounter) {
+                s1.RunKmerCounter();
+            } else {
+                s1.RunPattern();
+            }
+
             long duration = (System.nanoTime() - startTime) / 1000000000;
             System.out.println("Time taken: " + duration + " seconds");
         } catch (IOException e) {
