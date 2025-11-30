@@ -6,6 +6,7 @@ public class GeneDistance {
     public static void main(String[] args) {
         if (args.length > 0) {
             String infile = args[0]; // file path or Folder
+            String baseName = "";
 
             System.out.println("Current Directory: " + System.getProperty("user.dir"));
             System.out.println("Command-line arguments:");
@@ -14,6 +15,8 @@ public class GeneDistance {
             String s = String.join(" ", args).toLowerCase() + " ";
             int kmer = 4;
             int KmerCounter = 0;
+ 
+ 
 
             if (s.contains("-kmerstat")) {
                 KmerCounter = 1;
@@ -37,6 +40,7 @@ public class GeneDistance {
             if (folder.exists() && (folder.isDirectory() || folder.isFile())) {
                 if (folder.isDirectory()) {
                     File[] files = folder.listFiles();
+                    baseName = folder.getName();
 
                     if (files.length == 0) {
                         System.err.println("No files: " + folder.toString());
@@ -50,11 +54,11 @@ public class GeneDistance {
                             filelist[++k] = file.getAbsolutePath();
                         }
                     }
-                    SaveResult(KmerCounter, kmer, filelist, folder.toPath().toString() + File.separator + "result");
+                    SaveResult(KmerCounter, kmer, baseName, filelist, folder.toPath().toString() + File.separator + "result" );
                 } else {
                     String[] filelist = new String[1];
                     filelist[0] = infile;
-                    SaveResult(KmerCounter, kmer, filelist, folder.toPath().toString()); //.xls
+                    SaveResult(KmerCounter, kmer, baseName, filelist, folder.toPath().toString() ); //.xls
                 }
             }
         } else {
@@ -68,19 +72,19 @@ public class GeneDistance {
         }
     }
 
-    private static void SaveResult(int KmerCounter, int model, String[] infiles, String folder) {
+    private static void SaveResult(int KmerCounter, int model, String baseName, String[] infiles, String folder ) {
         try {
             long startTime = System.nanoTime();
             System.out.println("Running...");
             SequencesSimilarity s1 = new SequencesSimilarity(model);
-            s1.SetFolder(infiles, folder);
+            s1.SetFolder(baseName, infiles, folder);
 
             if (KmerCounter > 0) {
                 s1.RunKmerCounter(KmerCounter);
             } else {
+                s1.RunTree();
                 s1.RunPattern();
             }
-
             long duration = (System.nanoTime() - startTime) / 1000000000;
             System.out.println("Time taken: " + duration + " seconds");
         } catch (IOException e) {
