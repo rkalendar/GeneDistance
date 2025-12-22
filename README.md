@@ -11,11 +11,31 @@ email: ruslan.kalendar@helsinki.fi
 
 Operating system(s): Platform independent
 
-Programming language: Java 24 or higher
+Programming language: Java 25 or higher
 
 [Java Downloads](https://www.oracle.com/java/technologies/downloads/)
 
 How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
+
+## Installing Java using Conda
+To install a specific version of OpenJDK using Conda, you need to specify the version number in your installation command and use the conda-forge channel. The latest version is available on the conda-forge channel.
+1. Add the conda-forge channel (if not already added). It is recommended to add the conda-forge channel to your configuration and set its priority to strict to ensure packages are preferentially installed from this channel:
+   
+```conda config --add channels conda-forge```
+
+```conda config --set channel_priority strict```
+
+2. Create a new Conda environment and install the desired OpenJDK version. Creating a dedicated environment helps manage dependencies and avoid conflicts with other projects:
+
+```conda create -n java25 openjdk=25```
+
+3. Activate the new environment:
+
+```conda activate java25```
+
+4. Check if you have Java installed. The output should display information for the installed Java version:
+
+```java -version```
 
 The program generates a file for analysis in the software MEGA 12: https://www.megasoftware.net/
 
