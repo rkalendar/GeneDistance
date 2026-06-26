@@ -56,6 +56,7 @@ public final class ReadingSequencesFiles {
             }
         }
         if (s == 0 || ns == 0) {
+            ns = 0;
             return;
         }
         name_seq = new String[ns];
@@ -67,7 +68,7 @@ public final class ReadingSequencesFiles {
             if (source[i] == 62) {
                 if (t > 0) {
 
-                    byte[] d = Arrays.copyOfRange(source, t, i - 1); //public static short[] copyOfRange(short[] original, int from, int to)
+                    byte[] d = Arrays.copyOfRange(source, t, i); // exclusive end; trailing separators are dropped by the cdn filter below
                     int x = 0;
                     for (int j = 0; j < d.length; j++) {
                         if (tables.cdn[d[j]] > 0) {
@@ -81,7 +82,7 @@ public final class ReadingSequencesFiles {
                 n++;
                 for (int j = i + 1; j < l; j++) {
                     if (source[j] == 10 || source[j] == 13) {
-                        name_seq[n] = new String(source, i + 1, j - i).trim();
+                        name_seq[n] = new String(source, i + 1, j - i - 1).trim();
                         i = j;
                         t = j + 1;
                         break;

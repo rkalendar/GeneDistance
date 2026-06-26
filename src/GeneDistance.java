@@ -16,8 +16,6 @@ public class GeneDistance {
             int kmer = 4;
             int KmerCounter = 0;
  
- 
-
             if (s.contains("-kmerstat")) {
                 KmerCounter = 1;
             }
@@ -42,7 +40,7 @@ public class GeneDistance {
                     File[] files = folder.listFiles();
                     baseName = folder.getName();
 
-                    if (files.length == 0) {
+                    if (files == null || files.length == 0) {
                         System.err.println("No files: " + folder.toString());
                         return;
                     }
@@ -62,7 +60,7 @@ public class GeneDistance {
                 }
             }
         } else {
-            System.out.println("GeneDistance (2024-2025) by Ruslan Kalendar (ruslan.kalendar@helsinki.fi)\nhttps://github.com/rkalendar/GeneDistance\n");
+            System.out.println("GeneDistance (2024-2026) by Ruslan Kalendar (ruslan.kalendar@helsinki.fi)\nhttps://github.com/rkalendar/GeneDistance\n");
             System.out.println("Basic usage:");
             System.out.println("java -jar GeneDistance.jar <inputfile>/<inputfolderpath> <optional_commands>");
             System.out.println("Common options:");
@@ -79,6 +77,11 @@ public class GeneDistance {
             SequencesSimilarity s1 = new SequencesSimilarity(model);
             s1.SetFolder(baseName, infiles, folder);
 
+            if (s1.getSequenceCount() == 0) {
+                System.out.println("No sequences found to process.");
+                return;
+            }
+
             if (KmerCounter > 0) {
                 s1.RunKmerCounter(KmerCounter);
             } else {
@@ -88,7 +91,7 @@ public class GeneDistance {
             long duration = (System.nanoTime() - startTime) / 1000000000;
             System.out.println("Time taken: " + duration + " seconds");
         } catch (IOException e) {
-            System.out.println("Incorrect file name.");
+            System.err.println("File I/O error: " + e.getMessage());
         }
     }
 
@@ -109,6 +112,10 @@ public class GeneDistance {
                 break;
             }
         }
-        return (Integer.parseInt(r.toString()));
+        try {
+            return Integer.parseInt(r.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
