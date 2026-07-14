@@ -1,35 +1,47 @@
+import java.nio.charset.StandardCharsets;
 
-import java.util.Arrays;
-
+/**
+ * Reads the sequences of a FASTA source held in memory.
+ *
+ * A record opens on a '>' that begins a line; the rest of that line is its
+ * name, and everything up to the next record is its sequence, from which only
+ * the nucleotide symbols are kept, in lower case (the table in {@link tables}
+ * maps them). Digits, gaps, spaces and line breaks are dropped, so a sequence
+ * numbered or wrapped in any way is read all the same.
+ *
+ * The base composition of the whole source is counted while it is read, and is
+ * given by getA()/getT()/getC()/getG(), getN(), getR(), getY() and getCG().
+ */
 public final class ReadingSequencesFiles {
 
+    /**
+     * The bytes are filtered in place, so the array given is modified and must
+     * not be reused by the caller.
+     */
     public ReadingSequencesFiles(byte[] s) {
         int n = 0;
         for (int i = 0; i < s.length; i++) {
-            if (s[i] > 8 && s[i] < 128) {
+            if (s[i] > 8 && s[i] < 128) {   // keeps the line breaks, drops control and non-ASCII bytes
                 s[n++] = s[i];
             }
         }
-        source = Arrays.copyOf(s, n);
+        source = s;
+        size = n;
         ReadingSequences();
+        source = null;   // the source is of no use once the sequences are read
     }
 
     public ReadingSequencesFiles(String s) {
-        source = s.getBytes();
-        ReadingSequences();
+        this(s.getBytes(StandardCharsets.ISO_8859_1));   // through the same filtering as a file
     }
 
+    /** The sequences, in the order they were read; empty when the source holds none. */
     public String[] getSequences() {
-        if (ns == 0) {
-            return null;
-        }
         return sequence;
     }
 
+    /** The name of each sequence: its FASTA header, without the '>'. */
     public String[] getNames() {
-        if (ns == 0) {
-            return null;
-        }
         return name_seq;
     }
 
@@ -37,77 +49,84 @@ public final class ReadingSequencesFiles {
         return ns;
     }
 
+    /** The number of nucleotides read, over all the sequences. */
+    public int getLength() {
+        return (int) lSeqs;
+    }
+
     private void ReadingSequences() {
-        if (source == null) {
-            return;
-        }
-        dnay = new double[128];
+        final byte[] src = source;
+        final int l = size;
+        final byte[] cdn = tables.cdn;
 
-        int l = source.length;
-        int s = 0; // total length
-        ns = 0;    // amount fasta sequences
-
+        int letters = 0;
+        int records = 0;
         for (int i = 0; i < l; i++) {
-            if (tables.cdn[source[i]] > 0) {
-                s++;
-            }
-            if (source[i] == 62) {
-                ns++;
+            final byte b = src[i];
+            if (b == '>') {
+                if (i == 0 || src[i - 1] == '\n' || src[i - 1] == '\r') {
+                    records++;   // a header is a line of its own: a '>' inside one opens nothing
+                }
+            } else if (cdn[b] > 0) {
+                letters++;
             }
         }
-        if (s == 0 || ns == 0) {
+        if (letters == 0 || records == 0) {
             ns = 0;
             return;
         }
-        name_seq = new String[ns];
-        sequence = new String[ns];
+
+        name_seq = new String[records];
+        sequence = new String[records];
+
         int n = -1;
-        int t = 0;
-
+        int t = 0;   // where the sequence of the record being read starts
         for (int i = 0; i < l; i++) {
-            if (source[i] == 62) {
-                if (t > 0) {
-
-                    byte[] d = Arrays.copyOfRange(source, t, i); // exclusive end; trailing separators are dropped by the cdn filter below
-                    int x = 0;
-                    for (int j = 0; j < d.length; j++) {
-                        if (tables.cdn[d[j]] > 0) {
-                            d[x] = tables.cdn[d[j]];
-                            x++;
-                        }
-                    }
-                    sequence[n] = new String(Arrays.copyOfRange(d, 0, x));
-                    lSeqs = lSeqs + x;
+            if (src[i] == '>' && (i == 0 || src[i - 1] == '\n' || src[i - 1] == '\r')) {
+                if (n >= 0) {
+                    sequence[n] = read(t, i);
                 }
                 n++;
-                for (int j = i + 1; j < l; j++) {
-                    if (source[j] == 10 || source[j] == 13) {
-                        name_seq[n] = new String(source, i + 1, j - i - 1).trim();
-                        i = j;
-                        t = j + 1;
-                        break;
-                    }
+                int j = i + 1;
+                while (j < l && src[j] != '\n' && src[j] != '\r') {
+                    j++;
                 }
+                // a header the source ends on, with no line break, still names its (empty) sequence
+                name_seq[n] = new String(src, i + 1, j - i - 1, StandardCharsets.ISO_8859_1).trim();
+                i = j;
+                t = j + 1;
             }
         }
-        byte[] d = Arrays.copyOfRange(source, t, l);
-        int x = 0;
-        for (int j = 0; j < d.length; j++) {
-            if (tables.cdn[d[j]] > 0) {
-                d[x] = tables.cdn[d[j]];
-                x++;
+        sequence[n] = read(Math.min(t, l), l);
+        ns = n + 1;
+    }
+
+    /**
+     * Reads the sequence of source[from,to): keeps the nucleotide symbols, in
+     * lower case, and counts them. They are packed back into that same range,
+     * which the reading has left behind and no one reads again, so a sequence
+     * costs one String and nothing else.
+     */
+    private String read(int from, int to) {
+        final byte[] src = source;
+        final byte[] cdn = tables.cdn;
+        final double[] freq = dnay;
+
+        int x = from;
+        for (int i = from; i < to; i++) {
+            final byte c = cdn[src[i]];
+            if (c > 0) {
+                src[x++] = c;
+                freq[c]++;
             }
         }
-        lSeqs = lSeqs + x;
-        sequence[n] = new String(Arrays.copyOfRange(d, 0, x));
+        final int n = x - from;
+        lSeqs += n;
+        return new String(src, from, n, StandardCharsets.ISO_8859_1);
     }
 
-    public void SetFolder(String p) {
-        if (!p.isEmpty()) {
-            fld = p + "__";
-        }
-    }
-
+    // "M=(A/C) R=(A/G) W=(A/T) S=(G/C) Y=(C/T) K=(G/T) V=(A/G/C) H=(A/C/T) D=(A/G/T) B=(C/G/T) N=(A/G/C/T), U=T and I"
+    // an ambiguous symbol counts for a fraction of each of the bases it stands for
     public double getA() {
         return (dnay[97] + (dnay[109] + dnay[114] + dnay[119]) / 2 + (dnay[118] + dnay[104] + dnay[100]) / 3 + dnay[110] / 4);
     }
@@ -136,18 +155,16 @@ public final class ReadingSequencesFiles {
         return (dnay[99] + dnay[116] + dnay[117] + dnay[121] + (dnay[109] + dnay[115] + dnay[110] + dnay[107] + dnay[119]) / 2 + (dnay[98] + dnay[118] + dnay[104] + dnay[98] + dnay[104] + dnay[100]) / 3);
     }
 
-    public int getLength() {
-        return (int) lSeqs;
-    }
-
+    /** The GC content of the source, in percent. */
     public double getCG() {
         return lSeqs < 1 ? 0 : (100 * (dnay[103] + dnay[105] + dnay[99] + dnay[115] + ((dnay[114] + dnay[107] + dnay[109] + dnay[121] + dnay[110]) / 2) + ((dnay[98] + dnay[118] + dnay[100] + dnay[98] + dnay[118] + dnay[104]) / 3))) / lSeqs;
     }
-    private String fld = "";
-    private double[] dnay;
-    private String[] name_seq;
-    private String[] sequence;
-    private byte[] source = null;
-    private double lSeqs = 0;
+
+    private final double[] dnay = new double[128];   // how often each symbol occurs, by its code
+    private String[] name_seq = new String[0];
+    private String[] sequence = new String[0];
+    private byte[] source;
+    private int size;
+    private long lSeqs = 0;
     private int ns = 0;
 }
