@@ -16,17 +16,15 @@ Programming language: Java 26 or higher
 [Java Downloads](https://www.oracle.com/java/technologies/downloads/)
 
 
-How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
-
 ---
 
 ## Installation
 
 ### Option 1: Direct Download
 
-1. Download `virtualPCR.jar` from the `dist` directory of this repository.
+1. Download `GeneDistance.jar` from the `dist` directory of this repository.
 2. Place it in your preferred location.
-3. Ensure Java 25+ is installed and available in your `PATH`.
+3. Ensure Java 26+ is installed and available in your `PATH`. How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
 
 Verify Java is available:
 
