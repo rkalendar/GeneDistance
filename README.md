@@ -68,7 +68,7 @@ random sequences), with ```-kmer=41```:
 | random / random | **unrelated** | **65** | **89** | **2** |
 
 The reports of the measures are written side by side, as ```_kN.*```, ```_kN_cos.*```,
-```_kN_d2s.*``` and ```_cK.*```, and never overwrite one another.
+```_kN_d2s.*```, ```_cK.*``` and ```_scanK.xls```, and never overwrite one another.
 
 *d2\**: Reinert G, Chew D, Sun F, Waterman MS (2009) *J Comput Biol* 16:1615-1634; Song K et al.
 (2014) *Brief Bioinform* 15:343-353.
@@ -146,6 +146,9 @@ Written next to the input (```result_kN.*``` when a folder is given):
 | --- | --- |
 | ```<input>_kN.xls``` | k-mer counts, k-mer distances, and the similarity matrix (%) |
 | ```<input>_kN.meg``` | distance matrix for MEGA (lower-left), to build a tree |
+| ```<input>_cK.xls``` | ```-contain```: containment matrix (%) and the identity (%) of the shared part |
+| ```<input>_cK.meg``` | ```-contain```: distance matrix (1 - identity) for MEGA |
+| ```<input>_scanK.xls``` | ```-scan```: best window per sequence, the regions that hold the query (position, identity, E-value) and the containment profile |
 
 Exit codes: 0 = done, 1 = wrong usage or no sequence found, 2 = I/O error.
 
