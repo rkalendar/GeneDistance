@@ -18,6 +18,39 @@ Programming language: Java 26 or higher
 
 How do I set or change [the Java path system variable](https://www.java.com/en/download/help/path.html)
 
+---
+
+## Installation
+
+### Option 1: Direct Download
+
+1. Download `virtualPCR.jar` from the `dist` directory of this repository.
+2. Place it in your preferred location.
+3. Ensure Java 25+ is installed and available in your `PATH`.
+
+Verify Java is available:
+
+```bash
+java -version
+```
+
+### Option 2: Install Java via Conda
+
+```bash
+# Add conda-forge channel and set priority
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+
+# Create environment with OpenJDK 26
+conda create -n java26 openjdk=26
+
+# Activate environment
+conda activate java26
+
+# Verify installation
+java -version
+```
+
 
 To run the project from the command line. Command-line options, separated by spaces. 
 The executive file ```GeneDistance.jar``` is in the ```dist``` directory, which can be copied to any location. 
