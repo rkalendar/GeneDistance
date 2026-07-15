@@ -1,20 +1,21 @@
 ## GeneDistance
-## Identifications of genetic similarity or the distance between genomic sequences (In approximate string matching)
+## Identifications of genetic similarity or the distance between genomic sequences (in approximate string matching)
 
 ## Author
 Ruslan Kalendar 
 email: ruslan.kalendar@helsinki.fi
 
-[Web](http://primerdigital.com/tools/)
 
-## Availability and requirements:
+## Requirements
 
-Operating system(s): Platform independent
+| Requirement | Details |
+|-------------|---------|
+| **Java** | Version 26 or higher |
+| **OS** | Windows, Linux, or macOS |
+| **RAM** | Default JVM heap is sufficient for most tasks; increase for whole-genome analyses (see [Large Genomes](#large-genomes)) |
 
-Programming language: Java 26 or higher
-
-[Java Downloads](https://www.oracle.com/java/technologies/downloads/)
-
+- **Download Java:** <https://www.oracle.com/java/technologies/downloads/>
+- **Set Java Path:** <https://www.java.com/en/download/help/path.html>
 
 ---
 
