@@ -122,14 +122,16 @@ public class GeneDistance {
                 fail("Cannot read the folder: " + infile);
                 return;
             }
-            // the reports are written into that same folder: never read them back in
-            String xls = outBase + "_k" + kmer + tag + ".xls";
-            String meg = outBase + "_k" + kmer + tag + ".meg";
+            // the reports are all written into this same folder as result*.xls / result*.meg,
+            // whatever the measure and its k (which -contain and -scan only settle later): never
+            // read one of them back in as an input sequence
             for (File file : found) {
                 if (file.isFile()) {
-                    String p = file.getAbsolutePath();
-                    if (!p.equals(xls) && !p.equals(meg)) {
-                        files.add(p);
+                    String name = file.getName();
+                    boolean report = name.startsWith("result")
+                            && (name.endsWith(".xls") || name.endsWith(".meg"));
+                    if (!report) {
+                        files.add(file.getAbsolutePath());
                     }
                 }
             }
