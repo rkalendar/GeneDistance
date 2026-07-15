@@ -12,7 +12,7 @@ email: ruslan.kalendar@helsinki.fi
 |-------------|---------|
 | **Java** | Version 26 or higher |
 | **OS** | Windows, Linux, or macOS |
-| **RAM** | Default JVM heap is sufficient for most tasks; increase for whole-genome analyses (see [Large Genomes](#large-genomes)) |
+| **RAM** | Default JVM heap is sufficient for most tasks |
 
 - **Download Java:** <https://www.oracle.com/java/technologies/downloads/>
 - **Set Java Path:** <https://www.java.com/en/download/help/path.html>
