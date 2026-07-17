@@ -69,15 +69,20 @@ The full list of the options is printed by:
 
 ### Options:
 
+The **default measure is ```-vector```** — run with no measure flag and it is used. The former
+default, the k-mer spacing measure, is now ```-spacing```.
+
 | Option | Meaning |
 | --- | --- |
 | ```-kmer=N``` | set of k-mers used in the analysis, ```N``` = 4/5/6/8/10 (symmetric) or 41/61/81/101 (non-symmetric), default ```-kmer=4``` |
+| ```-vector``` | **the default**: *d2\** with **scale-matched windows and both strands** — a short fragment is compared to the best window of a longer one, on either strand, and scores no better than chance (measured from the input per length scale) are dropped. For homology between fragments of very different length |
+| ```-spacing``` | the former default: how the k-mers are *spaced* inside each sequence |
 | ```-d2star``` | compare the k-mer **frequencies** instead of their spacing, each count centred on the base composition of its own sequence (the *d2\** measure) |
 | ```-cosine``` | the same, on the raw frequencies, without centring |
-| ```-vector``` | *d2\** with **scale-matched windows and both strands**: a short fragment is compared to the best window of a longer one, on either strand, and scores no better than chance (measured from the input per length scale) are dropped. For homology between fragments of very different length |
 | ```-contain``` | **containment**: how much of each sequence occurs in each other one, on the whole k-mer space. Finds a short element inside a long sequence |
 | ```-scan```, ```-scan=N``` | **where** each sequence holds the query: a window the size of the query is walked along them. The query is the first sequence of the input, or the N-th |
 | ```-ksize=K``` | the k of the exact k-mers ```-contain``` and ```-scan``` use (6-31). Chosen for the length of the sequences unless given |
+| ```-scaled=N``` | **FracMinHash** for ```-contain``` / ```-scan```: keep only ~1/N of the k-mers so a 2 Gb genome fits in memory. ```N=1``` is exact; ```-scaled``` or ```-scaled=auto``` chooses N for the size |
 | ```-kmerstat``` | report the k-mer distances of each sequence, instead of comparing them |
 | ```-kmer2stat``` | report the k-mer distances averaged over all the target sequences |
 | ```-h```, ```--help``` | print the help and exit |
@@ -156,7 +161,60 @@ The report also estimates the identity of the shared part, *p = C*<sup>1/k</sup>
 where the shared k-mers are no more than chance would give.
 
 ```-contain``` keeps the k-mers of every sequence in memory, about 8 bytes per base, so a folder of
-whole genomes wants ```java -Xmx8g -jar ...```.
+whole genomes wants ```java -Xmx8g -jar ...``` — or a **FracMinHash sketch** to bound that.
+
+
+### Chromosome-scale input (up to 2 Gb): ```-scaled```
+
+The exact ```-contain``` / ```-scan``` hold every distinct k-mer, ~8 bytes each, so a 2 Gb genome
+needs ~16 GB per sequence. ```-scaled=N``` keeps only the k-mers whose hash falls in the bottom
+1/N of the hash space (a FracMinHash sketch, as in Mash / sourmash), so the set shrinks by N while
+the containment estimated from the kept fraction stays unbiased. Measured on two related 50 Mb
+sequences:
+
+| | heap needed | time | containment | identity |
+| --- | --- | --- | --- | --- |
+| ```-contain``` (exact) | ~2 GB | 8.6 s | 8% | 86% |
+| ```-contain -scaled=1000``` | **~200 MB** | **1.0 s** | 8% | 86% |
+
+Same numbers, a tenth of the memory and a tenth of the time. At ```-scaled=1000``` a 2 Gb genome's
+sketch is ~2 M hashes (~16 MB) instead of ~16 GB. ```-scaled=1``` (the default) is the exact
+measure, bit for bit; ```-scaled``` with no number picks N from the size of the input. Reports go to
+```_cKsN.*``` / ```_scanKsN.*``` so a sketch run never overwrites an exact one.
+
+*FracMinHash*: Irber L et al. (2022) *sourmash*; Hera MR, Pierce-Ward NT, Koslicki D (2023)
+*Genome Research* 33(7):1061-1068.
+
+
+### FASTA larger than 2 GB
+
+The input is read **record by record from a stream**, not loaded whole, so a multi-FASTA past the
+~2.1 GB that a single Java array can hold is read all the same. The records are byte for byte the
+ones the old whole-file reader produced (verified over the test corpus and its edge cases), so every
+mode's output is unchanged.
+
+What that costs in memory depends on the mode:
+
+| mode | held in memory | a 2 Gb genome |
+| --- | --- | --- |
+| ```-d2star``` / ```-cosine``` | one small vector per record, streamed | **constant** — ran 2×50 Mb in a 256 MB heap |
+| ```-contain -scaled=N``` | only the sketches | **~16 MB per genome** — 512 MB heap is plenty |
+| ```-scan``` | the query index and one subject at a time | ~ the largest record |
+| ```-vector``` (default) | a segmented ```SeqStore``` (it needs random access to windows) | ~ the data, but a record may exceed 2.1 GB |
+| ```-spacing``` | one small vector per record, streamed | **constant** |
+
+```-d2star```/```-cosine```/```-spacing``` only pass over each record once, so they stream it into a
+small vector and never hold the sequences. ```-vector``` (the default) compares a short sequence to
+arbitrary windows of a longer one and draws random windows to calibrate, so it needs random access; it
+streams the input into a **segmented ```SeqStore```** (1 GB byte[] segments addressed by a global
+```long``` offset), which holds the data once — no second copy for the reverse strand — and lets a
+single chromosome exceed the 2.1 GB a String can hold. Every mode now reads the input as a stream.
+
+Demonstrated on a 2.09 GiB, 3 × 740 Mb file: ```Files.readAllBytes``` cannot allocate an array that
+large and the old reader fails with an out-of-memory error even at ```-Xmx8g```; the streaming
+reader runs ```-contain -scaled=1000``` on it in a 512 MB heap in 35 s. One record may still exceed
+~2.1 Gb only in the exact (unsketched) modes that hold it as a String; ```-contain```/```-scan```
+with ```-scaled``` never build the String, so a single chromosome of any size is fine.
 
 
 ### Where the element sits
