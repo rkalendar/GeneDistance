@@ -75,7 +75,7 @@ default, the k-mer spacing measure, is now ```-spacing```.
 | Option | Meaning |
 | --- | --- |
 | ```-kmer=N``` | set of k-mers used in the analysis, ```N``` = 4/5/6/8/10 (symmetric) or 41/61/81/101 (non-symmetric), default ```-kmer=4``` |
-| ```-vector``` | **the default**: *d2\** with **scale-matched windows and both strands** — a short fragment is compared to the best window of a longer one, on either strand, and scores no better than chance (measured from the input per length scale) are dropped. For homology between fragments of very different length |
+| ```-vector``` | **the default** — a method for homology between fragments of very different length. A short sequence is compared to the **best window** of a longer one at its own scale, on **either strand**, and a score counts only when it clears the **chance level measured from the input itself** for that length class. The per-window comparison of two composition profiles is equivalent to the *d2\** statistic (k-mer counts centred on the base composition); the local window, the two strands and the calibrated floor are ```-vector```'s own — none of them part of *d2\** |
 | ```-spacing``` | the former default: how the k-mers are *spaced* inside each sequence |
 | ```-d2star``` | compare the k-mer **frequencies** instead of their spacing, each count centred on the base composition of its own sequence (the *d2\** measure) |
 | ```-cosine``` | the same, on the raw frequencies, without centring |
@@ -133,6 +133,13 @@ scale that cannot be calibrated is simply left uncut (its raw, already well-sepa
 reported). For a short element that shares only part of *both* sequences (e.g. two different genomic
 regions each carrying the same element plus their own flanks), ```-contain``` remains the sharper
 tool — it asks "how much is shared" rather than "is the composition matched at scale".
+
+Inside a single window, the two composition profiles are scored the way the *d2\** statistic does —
+k-mer counts centred on the base composition each window would produce by chance, then compared as a
+correlation (Reinert et al., *J Comput Biol*, 2009). That is the kernel only; ```-vector``` is not
+*d2\**. *d2\** is a whole-sequence distance, whereas ```-vector``` wraps that kernel in the local
+window, the two strands and the data-calibrated floor above — which is what lets it find partial
+homology across very different lengths, where whole-sequence *d2\** cannot.
 
 *Windowing and the per-scale chance floor follow* SequencesClustering *of* TotalRepeats.
 
