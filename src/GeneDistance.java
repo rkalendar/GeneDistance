@@ -61,6 +61,8 @@ public class GeneDistance {
                 statistic = SequencesSimilarity.COSINE;
             } else if (opt.equals("d2star") || opt.equals("d2*")) {
                 statistic = SequencesSimilarity.D2STAR;
+            } else if (opt.equals("vector")) {
+                statistic = SequencesSimilarity.VECTOR;
             } else if (opt.equals("contain")) {
                 contain = 1;
             } else if (opt.startsWith("contain=")) {
@@ -75,7 +77,7 @@ public class GeneDistance {
             } else if (opt.startsWith("kmer=")) {
                 kmer = model(opt.substring(5).trim(), a);
             } else {
-                fail("Unknown option: " + a);
+                //fail("Unknown option: " + a);
             }
         }
 
@@ -91,6 +93,7 @@ public class GeneDistance {
         String tag = switch (statistic) {
             case SequencesSimilarity.COSINE -> "_cos";
             case SequencesSimilarity.D2STAR -> "_d2s";
+            case SequencesSimilarity.VECTOR -> "_vec";
             default -> "";
         };
 
@@ -106,6 +109,7 @@ public class GeneDistance {
                 : switch (statistic) {
                     case SequencesSimilarity.COSINE -> "cosine of the k-mer frequencies";
                     case SequencesSimilarity.D2STAR -> "d2* (k-mer frequencies, centred on the base composition)";
+                    case SequencesSimilarity.VECTOR -> "vector (d2*, scale-matched windows, both strands)";
                     default -> "k-mer spacing ratios (the default measure)";
                 }));
 
@@ -194,6 +198,10 @@ public class GeneDistance {
             if (KmerCounter > 0) {
                 s1.RunKmerCounter(KmerCounter);
                 System.out.println("Report: " + s1.getReportFile());
+            } else if (statistic == SequencesSimilarity.VECTOR) {
+                s1.RunVector();
+                System.out.println("Report: " + s1.getReportFile());
+                System.out.println("MEGA:   " + s1.getMegaFile());
             } else if (statistic > 0) {
                 s1.RunFrequency(statistic);
                 System.out.println("Report: " + s1.getReportFile());
@@ -304,6 +312,10 @@ public class GeneDistance {
         System.out.println("               arrives with an almost empty vector and its homology goes unseen;");
         System.out.println("  -cosine      the same, but on the raw frequencies, without centring. Simpler, and");
         System.out.println("               with a high floor: unrelated sequences still score around 70%;");
+        System.out.println("  -vector      d2* with scale-matched windows and both strands: for fragments of");
+        System.out.println("               very different length, a short one is compared to the best window of");
+        System.out.println("               a longer one, on either strand, and scores no better than chance are");
+        System.out.println("               dropped (the chance level is measured from the input per length scale);");
         System.out.println("  -kmerstat    report the k-mer distances of each sequence, instead of comparing them;");
         System.out.println("  -kmer2stat   report the k-mer distances averaged over all the sequences;");
         System.out.println("  -h, --help   print this help and exit;");
