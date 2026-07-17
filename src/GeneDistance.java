@@ -21,10 +21,12 @@ public class GeneDistance {
         String infile = null;
         int kmer = 4;
         int KmerCounter = 0;
-        int statistic = 0;   // 0 = the k-mer spacing measure, otherwise COSINE / D2STAR
+        int statistic = 0;   // 0 = the k-mer spacing measure, otherwise COSINE / D2STAR / VECTOR
+        boolean spacing = false;  // -spacing asks for the k-mer spacing measure (the former default)
         int contain = 0;     // 1 for a containment run
         int scan = 0;        // the sequence to look for, 1-based, in a scan
         int ksize = AUTO_K;  // the k of the exact k-mers those two modes use
+        int scaled = 1;      // FracMinHash downsampling for -contain/-scan (1 = exact); AUTO_SCALE = choose it
 
         for (String arg : args) {
             String a = arg.trim();
@@ -63,6 +65,8 @@ public class GeneDistance {
                 statistic = SequencesSimilarity.D2STAR;
             } else if (opt.equals("vector")) {
                 statistic = SequencesSimilarity.VECTOR;
+            } else if (opt.equals("spacing") || opt.equals("space")) {
+                spacing = true;
             } else if (opt.equals("contain")) {
                 contain = 1;
             } else if (opt.startsWith("contain=")) {
@@ -74,6 +78,10 @@ public class GeneDistance {
                 scan = queryIndex(opt.substring(5).trim(), a);
             } else if (opt.startsWith("ksize=")) {
                 ksize = exactK(opt.substring(6).trim(), a);
+            } else if (opt.equals("scaled")) {
+                scaled = AUTO_SCALE;
+            } else if (opt.startsWith("scaled=")) {
+                scaled = scaledOf(opt.substring(7).trim(), a);
             } else if (opt.startsWith("kmer=")) {
                 kmer = model(opt.substring(5).trim(), a);
             } else {
@@ -83,6 +91,12 @@ public class GeneDistance {
 
         if (infile == null) {
             fail("No target file or folder given.");
+        }
+
+        // -vector is the default measure: with no measure and no other mode named,
+        // run it. -spacing asks for the former default (the k-mer spacing measure).
+        if (statistic == 0 && !spacing && KmerCounter == 0 && contain == 0 && scan == 0) {
+            statistic = SequencesSimilarity.VECTOR;
         }
 
         File target = new File(infile);
@@ -109,8 +123,8 @@ public class GeneDistance {
                 : switch (statistic) {
                     case SequencesSimilarity.COSINE -> "cosine of the k-mer frequencies";
                     case SequencesSimilarity.D2STAR -> "d2* (k-mer frequencies, centred on the base composition)";
-                    case SequencesSimilarity.VECTOR -> "vector (d2*, scale-matched windows, both strands)";
-                    default -> "k-mer spacing ratios (the default measure)";
+                    case SequencesSimilarity.VECTOR -> "vector (d2*, scale-matched windows, both strands) [default]";
+                    default -> "k-mer spacing ratios";
                 }));
 
         String baseName = "";
@@ -148,16 +162,140 @@ public class GeneDistance {
             files.add(infile);
         }
 
-        System.exit(SaveResult(KmerCounter, statistic, contain, scan, ksize, tag, kmer, baseName, files.toArray(new String[0]), outBase));
+        System.exit(SaveResult(KmerCounter, statistic, contain, scan, ksize, scaled, tag, kmer, baseName, files.toArray(new String[0]), outBase));
     }
 
-    private static int SaveResult(int KmerCounter, int statistic, int contain, int scan, int ksize,
+    private static int SaveResult(int KmerCounter, int statistic, int contain, int scan, int ksize, int scaled,
             String tag, int model, String baseName, String[] infiles, String folder) {
         try {
             long startTime = System.nanoTime();
             System.out.println("Running...");
             SequencesSimilarity s1 = new SequencesSimilarity(model);
             s1.SetTag(tag);
+
+            // -contain streams the files and keeps only the sketches, never the
+            // sequences, so its memory is bounded whatever the genome size.
+            if (contain != 0) {
+                long[] lens = StreamingFasta.recordLengths(infiles);
+                int nseq = lens.length;
+                if (nseq == 0) {
+                    System.out.println("No sequences found to process.");
+                    return USAGE_ERROR;
+                }
+                long longest = 0;
+                for (long L : lens) {
+                    if (L > longest) {
+                        longest = L;
+                    }
+                }
+                int k = (ksize == AUTO_K) ? SequencesSimilarity.containmentK(longest) : ksize;
+                int sc = (scaled == AUTO_SCALE) ? autoScaled(longest) : scaled;
+                System.out.println("Sequences: " + nseq + ", k=" + k
+                        + (ksize == AUTO_K ? " (chosen for the longest sequence, " + longest + " bp)" : "")
+                        + (sc > 1 ? ", FracMinHash scaled=" + sc + (scaled == AUTO_SCALE ? " (chosen for size)" : "") : ""));
+                s1.SetPaths(folder, "_c" + k + (sc > 1 ? "s" + sc : ""));
+                s1.RunContainmentStream(infiles, k, sc);
+                System.out.println("Report: " + s1.getReportFile());
+                System.out.println("MEGA:   " + s1.getMegaFile());
+                long t = (System.nanoTime() - startTime) / 1000000;
+                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
+                return OK;
+            }
+
+            // -scan streams the subjects one at a time, so the corpus is never all
+            // in memory: only the query index and the subject being scanned.
+            if (scan != 0) {
+                long[] lens = StreamingFasta.recordLengths(infiles);
+                int nseq = lens.length;
+                if (nseq == 0) {
+                    System.out.println("No sequences found to process.");
+                    return USAGE_ERROR;
+                }
+                if (scan > nseq) {
+                    System.err.println("There is no sequence " + scan + ": the input holds " + nseq + ".");
+                    return USAGE_ERROR;
+                }
+                if (nseq < 2) {
+                    System.err.println("A scan needs the query and at least one sequence to look through.");
+                    return USAGE_ERROR;
+                }
+                long longest = 0;
+                for (long L : lens) {
+                    if (L > longest) {
+                        longest = L;
+                    }
+                }
+                int k = (ksize == AUTO_K) ? SequencesSimilarity.containmentK(longest) : ksize;
+                int sc = (scaled == AUTO_SCALE) ? autoScaled(longest) : scaled;
+                System.out.println("Sequences: " + nseq + ", k=" + k
+                        + (ksize == AUTO_K ? " (chosen for the longest sequence, " + longest + " bp)" : "")
+                        + (sc > 1 ? ", FracMinHash scaled=" + sc + (scaled == AUTO_SCALE ? " (chosen for size)" : "") : ""));
+                s1.SetPaths(folder, "_scan" + k + (sc > 1 ? "s" + sc : ""));
+                s1.RunScanStream(infiles, scan - 1, k, sc);
+                System.out.println("Report: " + s1.getReportFile());
+                long t = (System.nanoTime() - startTime) / 1000000;
+                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
+                return OK;
+            }
+
+            // -d2star and -cosine are purely sequential: they stream each record into
+            // a small vector and never hold the sequences, so their memory is bounded.
+            if (statistic == SequencesSimilarity.COSINE || statistic == SequencesSimilarity.D2STAR) {
+                long[] lens = StreamingFasta.recordLengths(infiles);
+                int nseq = lens.length;
+                if (nseq == 0) {
+                    System.out.println("No sequences found to process.");
+                    return USAGE_ERROR;
+                }
+                System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount());
+                s1.SetPaths(folder, "_k" + s1.getModel() + tag);
+                s1.RunFrequencyStream(infiles, statistic);
+                System.out.println("Report: " + s1.getReportFile());
+                System.out.println("MEGA:   " + s1.getMegaFile());
+                long t = (System.nanoTime() - startTime) / 1000000;
+                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
+                return OK;
+            }
+
+            // -vector needs random access (windows of the long sequence, random null
+            // draws), so it streams the input into a segmented store rather than an
+            // array of Strings: the corpus and a single record may exceed 2 GB.
+            if (statistic == SequencesSimilarity.VECTOR) {
+                SeqStore st = SeqStore.build(infiles);
+                int nseq = st.count();
+                if (nseq == 0) {
+                    System.out.println("No sequences found to process.");
+                    return USAGE_ERROR;
+                }
+                System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount());
+                s1.SetPaths(folder, "_k" + s1.getModel() + tag);
+                s1.RunVector(st);
+                System.out.println("Report: " + s1.getReportFile());
+                System.out.println("MEGA:   " + s1.getMegaFile());
+                long t = (System.nanoTime() - startTime) / 1000000;
+                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
+                return OK;
+            }
+
+            // the k-mer spacing measure (-spacing): sequential, so it streams the
+            // records into their small count vectors without holding the sequences.
+            if (KmerCounter == 0) {
+                long[] lens = StreamingFasta.recordLengths(infiles);
+                int nseq = lens.length;
+                if (nseq == 0) {
+                    System.out.println("No sequences found to process.");
+                    return USAGE_ERROR;
+                }
+                System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount());
+                s1.SetPaths(folder, "_k" + s1.getModel() + tag);
+                s1.RunStream(infiles);
+                System.out.println("Report: " + s1.getReportFile());
+                System.out.println("MEGA:   " + s1.getMegaFile());
+                long t = (System.nanoTime() - startTime) / 1000000;
+                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
+                return OK;
+            }
+
             s1.SetFolder(baseName, infiles, folder);
 
             int nseq = s1.getSequenceCount();
@@ -166,51 +304,10 @@ public class GeneDistance {
                 return USAGE_ERROR;
             }
 
-            if (contain != 0 || scan != 0) {
-                int k = (ksize == AUTO_K) ? SequencesSimilarity.containmentK(s1.getLongestSequence()) : ksize;
-                System.out.println("Sequences: " + nseq + ", k=" + k
-                        + (ksize == AUTO_K ? " (chosen for the longest sequence, " + s1.getLongestSequence() + " bp)" : ""));
-
-                if (scan != 0) {
-                    if (scan > nseq) {
-                        System.err.println("There is no sequence " + scan + ": the input holds " + nseq + ".");
-                        return USAGE_ERROR;
-                    }
-                    if (nseq < 2) {
-                        System.err.println("A scan needs the query and at least one sequence to look through.");
-                        return USAGE_ERROR;
-                    }
-                    s1.SetSuffix("_scan" + k);
-                    s1.RunScan(k, scan - 1);
-                } else {
-                    s1.SetSuffix("_c" + k);
-                    s1.RunContainment(k);
-                    System.out.println("MEGA:   " + s1.getMegaFile());
-                }
-                System.out.println("Report: " + s1.getReportFile());
-                long t = (System.nanoTime() - startTime) / 1000000;
-                System.out.println("Time taken: " + (t / 1000) + "." + String.format("%03d", t % 1000) + " seconds");
-                return OK;
-            }
-
             System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount());
 
-            if (KmerCounter > 0) {
-                s1.RunKmerCounter(KmerCounter);
-                System.out.println("Report: " + s1.getReportFile());
-            } else if (statistic == SequencesSimilarity.VECTOR) {
-                s1.RunVector();
-                System.out.println("Report: " + s1.getReportFile());
-                System.out.println("MEGA:   " + s1.getMegaFile());
-            } else if (statistic > 0) {
-                s1.RunFrequency(statistic);
-                System.out.println("Report: " + s1.getReportFile());
-                System.out.println("MEGA:   " + s1.getMegaFile());
-            } else {
-                s1.Run();
-                System.out.println("Report: " + s1.getReportFile());
-                System.out.println("MEGA:   " + s1.getMegaFile());
-            }
+            s1.RunKmerCounter(KmerCounter);
+            System.out.println("Report: " + s1.getReportFile());
             long ms = (System.nanoTime() - startTime) / 1000000;
             System.out.println("Time taken: " + (ms / 1000) + "." + String.format("%03d", ms % 1000) + " seconds");
             return OK;
@@ -224,6 +321,30 @@ public class GeneDistance {
     }
 
     private static final int AUTO_K = -1;
+    private static final int AUTO_SCALE = -1;
+
+    /** Downsampling that keeps the biggest sketch near a couple million k-mers. */
+    private static int autoScaled(long longest) {
+        long sc = Math.round(longest / 2_000_000.0);
+        return (int) Math.max(1, Math.min(100_000, sc));
+    }
+
+    private static int scaledOf(String value, String arg) {
+        if (value.equalsIgnoreCase("auto") || value.isEmpty()) {
+            return AUTO_SCALE;
+        }
+        int s;
+        try {
+            s = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            s = 0;
+        }
+        if (s < 1 || s > 1_000_000) {
+            fail("The scaled of " + arg + " must be between 1 and 1000000 "
+                    + "(1 = exact; ~1000 fits a 2 Gb genome). Or -scaled=auto to choose it for the size.");
+        }
+        return s;
+    }
 
     private static int exactK(String value, String arg) {
         int k;
@@ -305,6 +426,10 @@ public class GeneDistance {
         System.out.println("  -ksize=K     the k that -contain and -scan use (6-31, 11-16 suits most cases).");
         System.out.println("               Left out, it is chosen for the length of the sequences. Note that");
         System.out.println("               -kmer= names one of the sets above and does not apply to those two;");
+        System.out.println("  -scaled=N    FracMinHash for -contain / -scan: keep only ~1/N of the k-mers, so");
+        System.out.println("               a 2 Gb genome's set shrinks by N (from ~16 GB to ~16 MB at N=1000)");
+        System.out.println("               while the containment stays an unbiased estimate. N=1 is exact;");
+        System.out.println("               -scaled (or -scaled=auto) chooses N for the size of the input;");
         System.out.println("  -d2star      compare the k-mer frequencies rather than their spacing, each count");
         System.out.println("               centred on the base composition of its own sequence (the d2* measure).");
         System.out.println("               Use it whenever the sequences differ widely in length: the default");
@@ -312,10 +437,12 @@ public class GeneDistance {
         System.out.println("               arrives with an almost empty vector and its homology goes unseen;");
         System.out.println("  -cosine      the same, but on the raw frequencies, without centring. Simpler, and");
         System.out.println("               with a high floor: unrelated sequences still score around 70%;");
-        System.out.println("  -vector      d2* with scale-matched windows and both strands: for fragments of");
-        System.out.println("               very different length, a short one is compared to the best window of");
-        System.out.println("               a longer one, on either strand, and scores no better than chance are");
-        System.out.println("               dropped (the chance level is measured from the input per length scale);");
+        System.out.println("  -vector      the DEFAULT measure (used when no other is named): d2* with");
+        System.out.println("               scale-matched windows and both strands, for fragments of very different");
+        System.out.println("               length - a short one is compared to the best window of a longer one, on");
+        System.out.println("               either strand, and scores no better than chance are dropped (the chance");
+        System.out.println("               level is measured from the input per length scale);");
+        System.out.println("  -spacing     the former default: how the k-mers are spaced inside each sequence;");
         System.out.println("  -kmerstat    report the k-mer distances of each sequence, instead of comparing them;");
         System.out.println("  -kmer2stat   report the k-mer distances averaged over all the sequences;");
         System.out.println("  -h, --help   print this help and exit;");
