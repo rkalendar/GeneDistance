@@ -74,6 +74,7 @@ The full list of the options is printed by:
 | ```-kmer=N``` | set of k-mers used in the analysis, ```N``` = 4/5/6/8/10 (symmetric) or 41/61/81/101 (non-symmetric), default ```-kmer=4``` |
 | ```-d2star``` | compare the k-mer **frequencies** instead of their spacing, each count centred on the base composition of its own sequence (the *d2\** measure) |
 | ```-cosine``` | the same, on the raw frequencies, without centring |
+| ```-vector``` | *d2\** with **scale-matched windows and both strands**: a short fragment is compared to the best window of a longer one, on either strand, and scores no better than chance (measured from the input per length scale) are dropped. For homology between fragments of very different length |
 | ```-contain``` | **containment**: how much of each sequence occurs in each other one, on the whole k-mer space. Finds a short element inside a long sequence |
 | ```-scan```, ```-scan=N``` | **where** each sequence holds the query: a window the size of the query is walked along them. The query is the first sequence of the input, or the N-th |
 | ```-ksize=K``` | the k of the exact k-mers ```-contain``` and ```-scan``` use (6-31). Chosen for the length of the sequences unless given |
@@ -100,10 +101,35 @@ random sequences), with ```-kmer=41```:
 | random / random | **unrelated** | **65** | **89** | **2** |
 
 The reports of the measures are written side by side, as ```_kN.*```, ```_kN_cos.*```,
-```_kN_d2s.*```, ```_cK.*``` and ```_scanK.xls```, and never overwrite one another.
+```_kN_d2s.*```, ```_kN_vec.*```, ```_cK.*``` and ```_scanK.xls```, and never overwrite one another.
 
 *d2\**: Reinert G, Chew D, Sun F, Waterman MS (2009) *J Comput Biol* 16:1615-1634; Song K et al.
 (2014) *Brief Bioinform* 15:343-353.
+
+
+### Fragments of very different length: ```-vector```
+
+```-d2star``` compares whole sequences, which averages a shared region away when one sequence is
+much longer than the other. ```-vector``` fixes that the way TotalRepeats' *-vector* mode does: a
+short sequence is compared not to a long one as a whole but to the **best window of the long one at
+the short one's own scale** (step = half a window), on **either strand**, and a score is kept only
+when it stands clear of the **chance level measured for that length scale** from the input's own
+content (non-homologous windows screened by an exact 25-mer). On ```test/2.txt``` with ```-kmer=41```:
+
+| pair | truth | ```-d2star``` | ```-vector``` |
+| --- | --- | --- | --- |
+| 18S / the 18S-28S unit holding it | 18S is inside it | 51 | **97** |
+| 28S / the unit (reverse-complemented inside) | 28S is inside it | 45 | **98** |
+| 18S / 18S + 8.6 kb random | homologous | 29 | 100 |
+| any / random, barley, arabidopsis | **unrelated** | small | **0** |
+
+The calibrated floor needs enough content to measure the chance level; on a small input a length
+scale that cannot be calibrated is simply left uncut (its raw, already well-separated scores are
+reported). For a short element that shares only part of *both* sequences (e.g. two different genomic
+regions each carrying the same element plus their own flanks), ```-contain``` remains the sharper
+tool — it asks "how much is shared" rather than "is the composition matched at scale".
+
+*Windowing and the per-scale chance floor follow* SequencesClustering *of* TotalRepeats.
 
 
 ### A short element inside a long sequence
