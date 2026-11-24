@@ -13,6 +13,7 @@ of one occurs in the other (`-contain`), and where (`-scan`).
 ## Contents
 
 - [Requirements](#requirements) · [Installation](#installation) · [Basic usage](#basic-usage) · [Options](#options)
+- [The spacing signature: `-spacing`](#the-spacing-signature--spacing)
 - [Sequences of unequal length](#sequences-of-unequal-length)
 - [Fragments of very different length: `-vector`](#fragments-of-very-different-length--vector)
 - [A short element inside a long sequence](#a-short-element-inside-a-long-sequence)
@@ -94,13 +95,13 @@ default, the k-mer spacing measure, is now ```-spacing```.
 
 | Option | Meaning |
 | --- | --- |
-| ```-kmer=N``` | set of k-mers used in the analysis: ```4```/```5```/```6```/```8```/```10``` or ```41```/```61```/```81```/```101```, default ```-kmer=4``` (see [what the numbers mean](#what-the--kmer-numbers-mean)) |
-| ```-vector``` | **the default** — a method for homology between fragments of very different length. A short sequence is compared to the **best window** of a longer one at its own scale, on **either strand**, and a score counts only when it clears the **chance level measured from the input itself** for that length class. The per-window comparison of two composition profiles is equivalent to the *d2\** statistic (k-mer counts centred on the base composition); the local window, the two strands and the calibrated floor are ```-vector```'s own — none of them part of *d2\** |
-| ```-spacing``` | the former default: how the k-mers are *spaced* inside each sequence |
+| ```-kmer=N``` | set of k-mers used in the analysis: ```4```/```5```/```6```/```8```/```10``` or ```41```/```61```/```81```/```101```, default ```-kmer=4```; ```-vector``` uses ```-kmer=41``` unless a set is named (see [what the numbers mean](#what-the--kmer-numbers-mean)) |
+| ```-vector``` | **the default** — a method for homology between fragments of very different length. A short sequence is compared to the **best window** of a longer one at its own scale, on **either strand**, and a score counts only when it clears the **chance level measured from the input itself**, wherever one is measured for that length class. The per-window comparison of two composition profiles is equivalent to the *d2\** statistic (k-mer counts centred on the base composition); the local window, the two strands and the calibrated floor are ```-vector```'s own — none of them part of *d2\** |
+| ```-spacing``` | the k-mer **spacing signature**: the sequences are compared through the ratios of the average spacings of the k-mers of the set. Independent of sequence length and of strand; it tells whether two sequences have the same *composition* (the same genome), not whether they are homologous (see [the spacing signature](#the-spacing-signature--spacing)) |
 | ```-d2star``` | compare the k-mer **frequencies** instead of their spacing, each count centred on the base composition of its own sequence (the *d2\** measure) |
 | ```-cosine``` | the same, on the raw frequencies, without centring |
 | ```-contain```, ```-contain=K``` | **containment**: how much of each sequence occurs in each other one, on the whole k-mer space. Finds a short element inside a long sequence. ```-contain=K``` sets the exact k in one go, as ```-ksize=K``` does |
-| ```-scan```, ```-scan=N``` | **where** each sequence holds the query: a window the size of the query is walked along them. The query is the first sequence of the input, or the N-th |
+| ```-scan```, ```-scan=N``` | **where** each sequence holds the query: a window the size of the query is walked along them, and every region that holds it is reported with its position, identity, number of separate matches and E-value. The query is the first sequence of the input, or the N-th |
 | ```-ksize=K``` | the k of the exact k-mers ```-contain``` and ```-scan``` use (6-31, 11-16 suits most cases). Chosen for the length of the sequences unless given. It is unrelated to ```-kmer=```, which names one of the sets above |
 | ```-scaled=N``` | **FracMinHash** for ```-contain``` / ```-scan```: keep only ~1/N of the k-mers so a 2 Gb genome fits in memory (N = 1…1000000). ```N=1``` is the default and is exact; ```-scaled``` or ```-scaled=auto``` chooses N for the size |
 | ```-kmerstat``` | report the k-mer distances of each sequence, instead of comparing them |
@@ -110,14 +111,15 @@ default, the k-mer spacing measure, is now ```-spacing```.
 
 ```-d2*``` is accepted for ```-d2star``` and ```-space``` for ```-spacing```. Option names are
 case-insensitive and any number of leading dashes is accepted (```-vector```, ```--vector```), but
-an option must carry at least one — ```kmer=N``` alone is the only exception, anything else without
-a dash is taken for the input path. **An option that is not recognised is ignored without a
+an option must carry at least one — ```kmer=N``` and ```/?``` are the only exceptions, anything else
+without a dash is taken for the input path. **An option that is not recognised is ignored without a
 message**, so a misspelt measure leaves the default one running: check the ```Measure:``` line each
 run prints before trusting a result.
 
 The first argument that is not an option is the target file or folder; giving a second one is an
-error. Given a folder, every file in it is read and all their sequences are pooled into **one**
-analysis.
+error. Given a folder, every file directly in it is read — sub-folders are not descended into, and
+the tool's own ```result*.xls``` / ```result*.meg``` reports are skipped so that a re-run never
+takes them back in as input — and all their sequences are pooled into **one** analysis.
 
 ### What the ```-kmer=``` numbers mean
 
@@ -129,28 +131,64 @@ analysis.
 | ```8``` | symmetric 8-mers | ```101``` | non-symmetric 10-mers |
 | ```10``` | symmetric 10-mers | | |
 
-The two-digit forms are the same word lengths counted without folding a k-mer together with its
-reverse complement: ```41``` is the non-symmetric 4-mer set, ```101``` the non-symmetric 10-mer one.
-The set in force is printed at the start of every run. ```-kmer=``` does not apply to ```-contain```
-and ```-scan```, which use exact k-mers of length ```-ksize=K```.
+The two-digit forms are words of the same length, but a **separate list** — not the plain set
+counted a different way. The plain ```4```/```6```/```8```/```10``` sets hold only words that are
+their own reverse complement (```5```, being of odd length, holds instead the 64 words whose flanks
+are reverse-complementary around any centre); the two-digit sets drop that requirement. So ```41``` (242 of the 256 4-mers) and ```61``` (109) contain their plain
+counterparts, while ```81``` (180) and ```101``` (900) are built of words that read the same
+backwards and share no word at all with ```8``` (252) and ```10``` (900). ```-d2star```,
+```-cosine``` and ```-vector``` count each word of the set on the strand given — a word outside the
+set in force is simply not counted. ```-spacing``` pools every word with its reverse complement, so
+that its result is the same on either strand: a palindromic set is unchanged by that, while ```41```
+becomes 127 features, ```61``` 85 and ```5``` 32 (the run prints the number). The set in force is
+printed at the start of every run that uses one. ```-kmer=``` does not apply to ```-contain``` and ```-scan```, which use
+exact k-mers of length ```-ksize=K``` and print that ```k``` instead.
 
+
+### The spacing signature: ```-spacing```
+
+Each sequence is described by the average spacing of every k-mer of the set, *x<sub>i</sub> = L / q<sub>i</sub>*
+(length over count, for k-mers seen at least twice), and two sequences are compared through the
+ratios of those spacings, pair of k-mers by pair of k-mers:
+
+```
+r_ij = x_i / x_j = q_j / q_i                      inside one sequence: the length L cancels
+F_ij = min(r_ij(A), r_ij(B)) / max(r_ij(A), r_ij(B))
+S    = mean of F_ij over all pairs i < j          reported as 100*S; the .meg holds 1 - S
+```
+
+With *d<sub>i</sub> = ln q<sub>i</sub>(A) − ln q<sub>i</sub>(B)*, *F<sub>ij</sub> = exp(−|d<sub>i</sub> − d<sub>j</sub>|)*: the
+measure is the spread of the log fold-changes of the k-mer counts between the two sequences. It
+follows that
+
+- **length does not matter**: *S* = 100% whenever the two count vectors are proportional (a sequence
+  and a tandem copy of itself score 100%);
+- **strand does not matter**: every word is pooled with its reverse complement (a palindromic word
+  is its own), so a sequence and its reverse complement score 100%;
+- every pair of k-mers weighs the same, and *S* is computed exactly in *O(n log n)* by sorting the
+  *d<sub>i</sub>*, not in *O(n²)*;
+- it measures **composition, not homology**. Two unrelated sequences of the same composition tend
+  to 100% as they grow, and below a certain length the counts are too small to tell anything: two
+  unrelated random sequences score about 60–70% at 2–10 kb. Use it on long sequences — roughly
+  50 kb and more for the 4-mer sets, 1 Mb and more for the 6-mers — to ask *which genome* a
+  chromosome or a scaffold belongs to. On 360 chromosomes of 24 animal and plant species,
+  ```-spacing -kmer=6``` puts 93% of them next to a chromosome of their own species.
 
 ### Sequences of unequal length
 
-The spacing measure — ```-spacing```, the former default — compares how the k-mers are *spaced*
-inside each sequence, and a k-mer only counts once it has been seen at least twice. A short sequence
-therefore arrives with an almost empty vector, and its homology to a long one goes unseen. That is
-why it is no longer the default: use ```-d2star``` there, or ```-vector``` (the default) when the
-lengths differ by more than a few fold. On ```test/2.txt``` (18S rRNA of macaque and man, the same
-18S diluted with random DNA, and three random sequences), with ```-kmer=41```:
+```-spacing``` only counts a k-mer once it has been seen at least twice, so a short sequence arrives
+with an almost empty vector, and its homology to a long one goes unseen. That is why it is not the
+default: use ```-d2star``` there, or ```-vector``` (the default) when the lengths differ by more than
+a few fold. On ```test/2.txt``` (18S rRNA of macaque and man, the same 18S diluted with random DNA,
+and three random sequences), with ```-kmer=41```:
 
 | pair | truth | ```-spacing``` | ```-cosine``` | ```-d2star``` |
 | --- | --- | --- | --- | --- |
 | 18S macaque / 18S human | orthologs | 99 | 100 | 100 |
-| 18S / the 18S-28S unit holding it | homologous | 55 | 83 | 51 |
-| 18S / 18S + 2 kb of random DNA | homologous | 77 | 96 | 75 |
-| 18S / random DNA | **unrelated** | **61** | **87** | **6** |
-| random / random | **unrelated** | **65** | **89** | **2** |
+| 18S / the 18S-28S unit holding it | homologous | 56 | 83 | 51 |
+| 18S / 18S + 2 kb of random DNA | homologous | 81 | 96 | 75 |
+| 18S / random DNA | **unrelated** | **64** | **87** | **6** |
+| random / random | **unrelated** | **68** | **89** | **2** |
 
 The reports of the measures are written side by side, as ```_kN.*```, ```_kN_cos.*```,
 ```_kN_d2s.*```, ```_kN_vec.*```, ```_cK.*``` and ```_scanK.xls```, and never overwrite one another.
@@ -164,9 +202,10 @@ The reports of the measures are written side by side, as ```_kN.*```, ```_kN_cos
 ```-d2star``` compares whole sequences, which averages a shared region away when one sequence is
 much longer than the other. ```-vector``` fixes that the way TotalRepeats' *-vector* mode does: a
 short sequence is compared not to a long one as a whole but to the **best window of the long one at
-the short one's own scale** (step = half a window), on **either strand**, and a score is kept only
-when it stands clear of the **chance level measured for that length scale** from the input's own
-content (non-homologous windows screened by an exact 25-mer). On ```test/2.txt``` with ```-kmer=41```:
+the short one's own scale** (step = half a window), on **either strand**, and, wherever that length
+scale has a chance level to measure, a score is kept only when it stands clear of the **chance level
+measured for that scale** from the input's own content (non-homologous windows screened by an exact
+25-mer). On ```test/2.txt``` with ```-kmer=41```:
 
 | pair | truth | ```-d2star``` | ```-vector``` |
 | --- | --- | --- | --- |
@@ -175,9 +214,25 @@ content (non-homologous windows screened by an exact 25-mer). On ```test/2.txt``
 | 18S / 18S + 8.6 kb random | homologous | 29 | 100 |
 | any / random, barley, arabidopsis | **unrelated** | small | **0** |
 
-The calibrated floor needs enough content to measure the chance level; on a small input a length
-scale that cannot be calibrated is simply left uncut (its raw, already well-separated scores are
-reported). For a short element that shares only part of *both* sequences (e.g. two different genomic
+```-vector``` works on the 4-mer set ```41``` unless ```-kmer=``` names another: the twelve
+palindromic 4-mers of the general default are too few to compare the composition of windows.
+
+The chance level of a length scale is not the highest score the sampled windows reach, since copies
+of one element that have diverged by more than ~10% share no 25-mer, pass the screen, and would set
+the level to their own score. It is placed where the largest of that many chance scores is expected,
+from the median of the sample and its spread *below* the median, which homologues do not reach (and
+never above the highest score seen).
+
+```-vector``` is a measure for **near-identical fragments**. On families made from real
+transposable-element consensus sequences (truncated copies, either strand) it assigns 100% of the
+copies to their family at 2% divergence and 99% at 5%, but copies that have diverged by 15% or more
+mostly fall below the chance level, because a 4-mer composition score of such copies is no longer
+clear of what unrelated windows reach. Use ```-contain``` for those: it keeps 99.5% at 15%.
+
+The floor is calibrated for length scales up to ~6 kb; above that the chance level of a composition
+score is already ~0, so the class is deliberately left uncut. A scale that *cannot* be calibrated —
+too little content, or too few non-homologous windows to draw from — is likewise left uncut. Either
+way its raw, already well-separated scores are reported. For a short element that shares only part of *both* sequences (e.g. two different genomic
 regions each carrying the same element plus their own flanks), ```-contain``` remains the sharper
 tool — it asks "how much is shared" rather than "is the composition matched at scale".
 
@@ -233,7 +288,9 @@ sequences:
 
 Same numbers, a tenth of the memory and a tenth of the time. At ```-scaled=1000``` a 2 Gb genome's
 sketch is ~2 M hashes (~16 MB) instead of ~16 GB. ```-scaled=1``` (the default) is the exact
-measure, bit for bit; ```-scaled``` with no number picks N from the size of the input. Reports go to
+measure, bit for bit; ```-scaled``` with no number picks N from the **longest sequence** in the
+input — about one hash kept per 2 Mb of it, so a 2 Gb chromosome gives N≈1000, and an input whose
+longest sequence is under ~3 Mb stays exact at N=1. Reports go to
 ```_cKsN.*``` / ```_scanKsN.*``` so a sketch run never overwrites an exact one.
 
 *FracMinHash*: Irber L et al. (2022) *sourmash*; Hera MR, Pierce-Ward NT, Koslicki D (2023)
@@ -279,29 +336,41 @@ is reported with its bounds, the identity of the match, and an E-value - the num
 good that an unrelated sequence of that length would be expected to yield, so that the best of a
 hundred thousand windows is not mistaken for a find.
 
-An Alu element planted, 5% mutated, at base 5000 of 10 kb of unrelated DNA:
+On ```test/2.txt```, looking for the 18S rRNA of the macaque (the first sequence):
 
 ```
-> java -jar GeneDistance.jar mix.fa -scan
+> java -jar GeneDistance.jar test/2.txt -scan
 
-Query: Q_AluYb11_289 (289 bp, 279 distinct k-mers of length 11)
-4 region(s) hold the query.
-   M_AluYb11_5pct           1..289 (289 bp), best window at 1     containment 70%  identity 97%  E=0.0
-   H_AluJo_283_real_homolog 1..274 (274 bp), best window at 1     containment 39%  identity 92%  E=0.0
-   L_10kb_CONTAINS_AluYb11  5008..5288 (281 bp), best window at 5000  containment 75%  identity 97%  E=0.0
+Query: 18S_Macaca_mulatta (1868 bp, 1856 distinct k-mers of length 11)
+5 region(s) hold the query.
+   18S_1kMacaca_mulatta  1..1868 (1868 bp), best window at 1  containment 100%  identity 100%  matches 1  E=0.0
+   18S_2kMacaca_mulatta  1..1868 (1868 bp), best window at 1  containment 100%  identity 100%  matches 1  E=0.0
+   18S-28S_Macaca_mulatta  3641..5819 (2179 bp), best window at 3641  containment 100%  identity 100%  matches 5  E=0.0
+   18S-28S_Homo_sapiens  3590..5664 (2075 bp), best window at 3644  containment 99%  identity 100%  matches 10  E=0.0
+   18S_Homo_sapiens  1..1869 (1869 bp), best window at 1  containment 99%  identity 100%  matches 3  E=0.0
 ```
 
-The element is found where it was put, and the 10 kb of unrelated DNA holds nothing (its best window
-scores E = 180, which is to say chance alone would give as much 180 times over). On ```test/2.txt```
-the 18S of the macaque is found at base 3641 of the 18S-28S unit, after the 5' ETS, and the 28S at
-7900, reverse complemented.
+The 18S is found at base 3641 of the 18S-28S unit, after the 5' ETS, and nothing is reported in the
+random sequences, the 28S or the unrelated genes: their best windows hold 2-7 k-mers of the query
+where chance gives 1.4-4.6, and score E = 16 to 730 (chance alone would give as much that many
+times over). *matches* is the number of separate exact matches under the window: one for an
+identical copy, more as substitutions cut it into pieces.
 
 The report also holds the profile - the containment of the query under the window, along each
 sequence - which plots as a curve of where the query is and is not.
 
-*E-value*: the Poisson tail of the count of shared k-mers over the windows walked, in the manner of
-Altschul SF et al. (1990) *J Mol Biol* 215:403-410. The k-mers of a window overlap, so it is the
-usual first approximation, not an exact probability.
+*E-value*: the number of windows holding that many k-mers of the query that a sequence of no relation
+would be expected to yield (Altschul SF et al. (1990) *J Mol Biol* 215:403-410). Two things are
+taken from the sequence searched rather than assumed. The chance of meeting each k-mer of the query
+follows from the **base composition of that sequence** - an AT-rich k-mer turns up in AT-rich DNA
+orders of magnitude more often than 4<sup>-k</sup>. And the k-mers met by chance are **not
+independent**: a chance match longer than k holds several consecutive k-mers, so their number under
+a window follows a geometric Poisson (Polya-Aeppli) law, not a Poisson one. With both, none of 560
+searches of unrelated chicken DNA with Arabidopsis repeats reports a region; treating the k-mers as
+independent and equally likely, as the first versions did, reported one in 13% of them. The values
+are conservative. Windows
+overlap, so it remains the usual first approximation, not an exact probability. A printed 0.0 is a
+value below the range of a double.
 
 *containment*: Broder AZ (1997) *SEQUENCES'97*; Koslicki D, Zabeti H (2019) *Appl Math Comput*
 354:206-215; Ondov BD et al. (2019) *Mash Screen*, *Genome Biology* 20:232. *Choice of k*: Ondov BD
@@ -314,17 +383,24 @@ Written next to the input (```result_kN.*``` when a folder is given):
 
 | File | Content |
 | --- | --- |
-| ```<input>_kN.xls``` | k-mer counts, k-mer distances, and the similarity matrix (%) |
-| ```<input>_kN.meg``` | distance matrix for MEGA (lower-left), to build a tree |
+| ```<input>_kN.xls``` | ```-spacing```: k-mer counts, average k-mer spacings, and the similarity matrix (%) |
+| ```<input>_kN.meg``` | distance matrix for MEGA (lower-left), to build a tree; for ```-spacing``` it is 1 − S |
 | ```<input>_cK.xls``` | ```-contain```: containment matrix (%) and the identity (%) of the shared part |
 | ```<input>_cK.meg``` | ```-contain```: distance matrix (1 - identity) for MEGA |
-| ```<input>_scanK.xls``` | ```-scan```: best window per sequence, the regions that hold the query (position, identity, E-value) and the containment profile |
+| ```<input>_scanK.xls``` | ```-scan```: best window per sequence, the regions that hold the query (position, identity, separate matches, E-value) and the containment profile |
 
 A ```-cosine```, ```-d2star``` or ```-vector``` run writes ```_kN_cos.*```, ```_kN_d2s.*``` or
-```_kN_vec.*```; a sketched ```-contain``` / ```-scan``` writes ```_cKsN.*``` / ```_scanKsN.*```. No
-report ever overwrites the report of another measure.
+```_kN_vec.*```; a sketched ```-contain``` / ```-scan``` writes ```_cKsN.*``` / ```_scanKsN.*```. The
+comparison measures therefore never overwrite one another, and they hold less than ```_kN.xls```
+above: ```_kN_cos.xls``` and ```_kN_d2s.xls``` carry the k-mer counts and the similarity matrix,
+```_kN_vec.xls``` the similarity matrix alone — the k-mer-distance block is written by ```-spacing```
+only. The ```.meg``` matrix is the same in all of them. ```-kmerstat``` and ```-kmer2stat``` are the
+exception: both write their table to ```<input>_kN.xls```, the name ```-spacing``` uses, so either
+overwrites a previous ```-spacing``` report and leaves its ```_kN.meg``` beside it, now stale.
 
-Exit codes: 0 = done, 1 = wrong usage or no sequence found, 2 = I/O error or out of memory.
+Exit codes: 0 = done, 1 = wrong usage or no sequence found, 2 = I/O error or out of memory. Under
+```-kmerstat``` / ```-kmer2stat``` a failed read is reported and the run carries on, so an input that
+cannot be read there ends at 1, or at 0 on a partial report when only some of the files failed.
 
 
 ### Examples:
