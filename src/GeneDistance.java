@@ -20,6 +20,7 @@ public class GeneDistance {
 
         String infile = null;
         int kmer = 4;
+        boolean kmerGiven = false;   // -vector has a default set of its own when none is named
         int KmerCounter = 0;
         int statistic = 0;   // 0 = the k-mer spacing measure, otherwise COSINE / D2STAR / VECTOR
         boolean spacing = false;  // -spacing asks for the k-mer spacing measure (the former default)
@@ -84,6 +85,7 @@ public class GeneDistance {
                 scaled = scaledOf(opt.substring(7).trim(), a);
             } else if (opt.startsWith("kmer=")) {
                 kmer = model(opt.substring(5).trim(), a);
+                kmerGiven = true;
             } else {
                 //fail("Unknown option: " + a);
             }
@@ -97,6 +99,12 @@ public class GeneDistance {
         // run it. -spacing asks for the former default (the k-mer spacing measure).
         if (statistic == 0 && !spacing && KmerCounter == 0 && contain == 0 && scan == 0) {
             statistic = SequencesSimilarity.VECTOR;
+        }
+        // -vector compares the composition of windows: the twelve palindromic 4-mers of
+        // the general default (-kmer=4) are too few for that, so unless a set is named
+        // it works on the 4-mer set 41.
+        if (statistic == SequencesSimilarity.VECTOR && !kmerGiven) {
+            kmer = VECTOR_DEFAULT_KMER;
         }
 
         File target = new File(infile);
@@ -286,7 +294,9 @@ public class GeneDistance {
                     System.out.println("No sequences found to process.");
                     return USAGE_ERROR;
                 }
-                System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount());
+                System.out.println("Sequences: " + nseq + ", k-mers: " + s1.getKmerCount()
+                        + (s1.getSpacingCount() != s1.getKmerCount()
+                                ? ", compared as " + s1.getSpacingCount() + " features (each word pooled with its reverse complement)" : ""));
                 s1.SetPaths(folder, "_k" + s1.getModel() + tag);
                 s1.RunStream(infiles);
                 System.out.println("Report: " + s1.getReportFile());
@@ -322,6 +332,7 @@ public class GeneDistance {
 
     private static final int AUTO_K = -1;
     private static final int AUTO_SCALE = -1;
+    private static final int VECTOR_DEFAULT_KMER = 41;
 
     /** Downsampling that keeps the biggest sketch near a couple million k-mers. */
     private static int autoScaled(long longest) {
@@ -405,35 +416,41 @@ public class GeneDistance {
         System.out.println("  java -jar GeneDistance.jar <inputfile>|<inputfolder> [options]");
         System.out.println();
         System.out.println("Input:");
-        System.out.println("  A FASTA file ('>' header line, then the sequence). Given a folder, every file in it");
-        System.out.println("  is read and all the sequences are pooled into one analysis.");
+        System.out.println("  A FASTA file ('>' header line, then the sequence). Given a folder, every file");
+        System.out.println("  directly in it is read - sub-folders are not descended into, and the tool's own");
+        System.out.println("  result*.xls / result*.meg reports are skipped so that a re-run never takes them");
+        System.out.println("  back in as input - and all the sequences are pooled into one analysis.");
         System.out.println();
         System.out.println("Options:");
-        System.out.println("  -kmer=N      set of k-mers used in the analysis (default: -kmer=4):");
+        System.out.println("  -kmer=N      set of k-mers used in the analysis (default: -kmer=4; for -vector,");
+        System.out.println("               -kmer=" + VECTOR_DEFAULT_KMER + "):");
         for (int m : SequencesSimilarity.MODELS) {
             System.out.println(String.format("                 %-4d %s", m, SequencesSimilarity.modelInfo(m)));
         }
         System.out.println("  -contain     how much of each sequence occurs in each other one: the containment");
-        System.out.println("               index on the whole k-mer space, |kmers(A) & kmers(B)| / |kmers(A)|.");
+        System.out.println("  -contain=K   index on the whole k-mer space, |kmers(A) & kmers(B)| / |kmers(A)|.");
         System.out.println("               Asymmetric, and the only measure here that finds a short element");
         System.out.println("               inside a long sequence, where a measure of the composition as a whole");
         System.out.println("               is drowned by the rest of it. The report also gives the identity of");
-        System.out.println("               the shared part;");
+        System.out.println("               the shared part. -contain=K sets the exact k in one go, as -ksize=K;");
         System.out.println("  -scan        where each sequence holds the query: a window the size of the query");
         System.out.println("  -scan=N      is walked along them, and every region that holds it is reported with");
-        System.out.println("               its position, its identity and an E-value. The query is the first");
-        System.out.println("               sequence of the input, or the N-th;");
+        System.out.println("               its position, its identity, the number of separate matches and an");
+        System.out.println("               E-value drawn from that number and from the base composition of the");
+        System.out.println("               sequence searched. The query is the first sequence of the input, or");
+        System.out.println("               the N-th;");
         System.out.println("  -ksize=K     the k that -contain and -scan use (6-31, 11-16 suits most cases).");
         System.out.println("               Left out, it is chosen for the length of the sequences. Note that");
         System.out.println("               -kmer= names one of the sets above and does not apply to those two;");
         System.out.println("  -scaled=N    FracMinHash for -contain / -scan: keep only ~1/N of the k-mers, so");
         System.out.println("               a 2 Gb genome's set shrinks by N (from ~16 GB to ~16 MB at N=1000)");
         System.out.println("               while the containment stays an unbiased estimate. N=1 is exact;");
-        System.out.println("               -scaled (or -scaled=auto) chooses N for the size of the input;");
+        System.out.println("               -scaled (or -scaled=auto) chooses N from the longest sequence of");
+        System.out.println("               the input, about one hash kept per 2 Mb of it;");
         System.out.println("  -d2star      compare the k-mer frequencies rather than their spacing, each count");
         System.out.println("               centred on the base composition of its own sequence (the d2* measure).");
-        System.out.println("               Use it whenever the sequences differ widely in length: the default");
-        System.out.println("               measure only counts a k-mer seen at least twice, so a short sequence");
+        System.out.println("               Use it whenever the sequences differ widely in length: -spacing");
+        System.out.println("               only counts a k-mer seen at least twice, so a short sequence");
         System.out.println("               arrives with an almost empty vector and its homology goes unseen;");
         System.out.println("  -cosine      the same, but on the raw frequencies, without centring. Simpler, and");
         System.out.println("               with a high floor: unrelated sequences still score around 70%;");
@@ -441,18 +458,31 @@ public class GeneDistance {
         System.out.println("               scale-matched windows and both strands, for fragments of very different");
         System.out.println("               length - a short one is compared to the best window of a longer one, on");
         System.out.println("               either strand, and scores no better than chance are dropped (the chance");
-        System.out.println("               level is measured from the input per length scale);");
-        System.out.println("  -spacing     the former default: how the k-mers are spaced inside each sequence;");
+        System.out.println("               level is measured from the input per length scale, for scales up to");
+        System.out.println("               ~6 kb; above that chance is ~0 and the scale is left uncut). It is");
+        System.out.println("               meant for near-identical fragments: copies that have diverged by more");
+        System.out.println("               than ~10% mostly fall below the chance level - use -contain for those;");
+        System.out.println("  -spacing     the k-mer spacing signature: the sequences are compared through the");
+        System.out.println("               ratios of the average spacings of the k-mers of the set, a word being");
+        System.out.println("               pooled with its reverse complement. The result does not depend on the");
+        System.out.println("               length of a sequence nor on its strand. It tells whether two sequences");
+        System.out.println("               have the same composition (the same genome), not whether they are");
+        System.out.println("               homologous, and needs long sequences: ~50 kb for 4-mers, ~1 Mb for");
+        System.out.println("               6-mers;");
         System.out.println("  -kmerstat    report the k-mer distances of each sequence, instead of comparing them;");
         System.out.println("  -kmer2stat   report the k-mer distances averaged over all the sequences;");
-        System.out.println("  -h, --help   print this help and exit;");
+        System.out.println("  -h, --help   print this help and exit (-? and /? do the same);");
         System.out.println("  --version    print the version and exit.");
         System.out.println();
         System.out.println("Output (written next to the input, 'result_kN.*' when a folder is given):");
-        System.out.println("  <input>_kN.xls   k-mer counts, k-mer distances and the similarity matrix (%);");
+        System.out.println("  <input>_kN.xls   -spacing: k-mer counts, k-mer distances and the similarity");
+        System.out.println("                   matrix (%);");
         System.out.println("  <input>_kN.meg   distance matrix for MEGA (lower-left), to build a tree.");
-        System.out.println("  -cosine and -d2star write to <input>_kN_cos.* and <input>_kN_d2s.*, so that the");
-        System.out.println("  reports of the three measures never overwrite one another.");
+        System.out.println("  -vector, -d2star and -cosine write to <input>_kN_vec.*, <input>_kN_d2s.* and");
+        System.out.println("  <input>_kN_cos.*, and a sketched -contain / -scan to <input>_cKsN.* /");
+        System.out.println("  <input>_scanKsN.*, so the comparison measures never overwrite one another.");
+        System.out.println("  -kmerstat and -kmer2stat are the exception: both write to <input>_kN.xls, the");
+        System.out.println("  name -spacing uses, and so overwrite its report.");
         System.out.println();
         System.out.println("Examples:");
         System.out.println("  java -jar GeneDistance.jar sequences.fasta");
@@ -460,6 +490,7 @@ public class GeneDistance {
         System.out.println("  java -jar GeneDistance.jar E:\\Genomes\\Oryza_sativa -kmer=41");
         System.out.println("  java -jar GeneDistance.jar sequences.fasta -kmerstat");
         System.out.println();
-        System.out.println("Exit codes: 0 = done, 1 = wrong usage or no sequence found, 2 = I/O error.");
+        System.out.println("Exit codes: 0 = done, 1 = wrong usage or no sequence found, 2 = I/O error or out");
+        System.out.println("of memory.");
     }
 }
